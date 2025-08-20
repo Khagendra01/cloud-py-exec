@@ -202,6 +202,7 @@ def execute_script_with_nsjail(script_content: str, timeout: int = 30, memory: i
                     raise ScriptExecutionError(f"Script execution failed: {output_data.get('error', 'Unknown error')}")
                 
                 # If no error, return the parsed data
+                output_data["execution_method"] = "nsjail"
                 return output_data
                 
             except json.JSONDecodeError as e:
@@ -251,6 +252,8 @@ def _execute_script_direct(script_file: Path, timeout: int = 30) -> Dict[str, An
             output_data = json.loads(json_line)
             if "error" in output_data:
                 raise ScriptExecutionError(f"Script execution failed: {output_data.get('error', 'Unknown error')}")
+            # Add execution method info
+            output_data["execution_method"] = "direct"
             return output_data
         except json.JSONDecodeError as e:
             raise ScriptExecutionError("Failed to parse script output as JSON") from e
@@ -312,6 +315,7 @@ def execute_script():
             "success": True,
             "result": result.get("result"),
             "stdout": result.get("stdout", ""),
+            "execution_method": result.get("execution_method", "unknown"),
             "timestamp": datetime.now().isoformat()
         })
         

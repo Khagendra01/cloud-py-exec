@@ -6,8 +6,41 @@ Test client for the Python Script Execution API
 import requests
 import json
 import time
+import sys
+import argparse
 
 API_BASE_URL = "https://python-script-api-84486829803.us-central1.run.app"
+
+def set_api_base_url(url: str) -> None:
+    global API_BASE_URL
+    API_BASE_URL = url.rstrip('/')
+
+def run_file_script(file_path: str) -> bool:
+    """Run a custom script from a local file against the API"""
+    print(f"Running custom script from file: {file_path}")
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            script = f.read()
+    except OSError as e:
+        print(f"Error: Could not read file: {e}")
+        return False
+
+    payload = {
+        "script": script
+    }
+
+    try:
+        response = requests.post(f"{API_BASE_URL}/execute", json=payload)
+        print(f"Status: {response.status_code}")
+        try:
+            print(f"Response: {json.dumps(response.json(), indent=2)}")
+        except ValueError:
+            print(f"Raw Response: {response.text}")
+        print()
+        return response.status_code == 200
+    except requests.exceptions.ConnectionError:
+        print("Error: Could not connect to API server.")
+        return False
 
 def test_health_check():
     """Test the health check endpoint"""
@@ -162,6 +195,8 @@ def main():
     print("Python Script Execution API Test Client")
     print("=" * 50)
     print()
+    print(f"Using API: {API_BASE_URL}")
+    print()
     
     tests = [
         ("Health Check", test_health_check),
@@ -206,4 +241,17 @@ def main():
         print("Some tests failed. Check the output above for details.")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Test client for the Python Script Execution API")
+    parser.add_argument("base_url", nargs="?", default=None, help="Override API base URL, e.g. https://service-url")
+    parser.add_argument("--file", "-f", dest="file", help="Path to a script file to run once against /execute")
+    args = parser.parse_args()
+
+    if args.base_url:
+        set_api_base_url(args.base_url)
+
+    if args.file:
+        success = run_file_script(args.file)
+        print("PASS" if success else "FAIL")
+        sys.exit(0 if success else 1)
+
     main()
